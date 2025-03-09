@@ -58,7 +58,8 @@ install_extra_packages() {
         python3-pip pipx apt-transport-https ca-certificates curl software-properties-common wget \
         fonts-liberation libu2f-udev libvulkan1 \
 		git xsel gnome-tweaks gnome-shell-extension-prefs gnome-shell-extensions \
-        hplip keepassxc  synaptic default-jre -y
+        hplip keepassxc  synaptic default-jre audacity -y
+    apt install solaar -y # logi bolt
 }
 
 setup_podman() {
