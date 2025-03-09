@@ -63,11 +63,36 @@ install_extra_packages() {
 }
 
 setup_podman() {
-    apt install podman podman-docker podman-compose distrobox -y
+    apt install podman podman-docker podman-compose -y
     echo '
 unqualified-search-registries = ["docker.io"]
 ' >> /etc/containers/registries.conf
 }
+
+setup_docker() {
+    apt-get remove docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc -y
+    apt-get update -y
+    apt-get install ca-certificates curl -y
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    chmod a+r /etc/apt/keyrings/docker.asc
+
+    echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+    $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+    tee /etc/apt/sources.list.d/docker.list > /dev/null
+    apt-get update -y
+
+    apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    systemctl enable --now docker
+
+    # groupadd docker
+    for userpath in /home/*; do
+        usermod -a -G docker $(basename $userpath)
+    done 
+}
+
 
 setup_fonts() {
     echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections    
@@ -93,7 +118,7 @@ Pin-Priority: 1001
 
 setup_zram() {
     apt install zram-tools -y
-    echo -e "ALGO=zstd\nPERCENT=20" | sudo tee -a /etc/default/zramswap
+    echo -e "ALGO=zstd\nPERCENT=20" | tee -a /etc/default/zramswap
     systemctl restart zramswap
     swapon -s
 }
@@ -150,7 +175,7 @@ install_freeplane() {
     #apt install freeplane openjdk-17-jdk -y
     export FP_VERSION="1.12.6"
     wget https://sourceforge.net/projects/freeplane/files/freeplane%20stable/freeplane_$FP_VERSION~upstream-1_all.deb
-    sudo apt install openjdk-17-jdk ./freeplane_$FP_VERSION~upstream-1_all.deb -y
+    apt install openjdk-17-jdk ./freeplane_$FP_VERSION~upstream-1_all.deb -y
 }
 
 install_qemu() {
@@ -270,8 +295,9 @@ auto() {
     restore_firefox
     msg 'Installing extra packages'
     install_extra_packages
-    msg 'Setup podman'
-    setup_podman
+    msg 'Setup containers'
+    #setup_podman
+    setup_docker
     msg 'Install MS fonts'
     setup_fonts
     msg 'Install chrome'
